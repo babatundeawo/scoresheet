@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Record class scores, see student reports and export to Excel. Works on any phone, even offline.">
+<meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0b0d18" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest">
+<meta property="og:title" content="Class Scoresheet"><meta property="og:description" content="Record scores, see reports, export to Excel."><meta name="robots" content="noindex">
+<title>Class Scoresheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<style>
+/* Design tokens: light by default, dark follows the system setting */
+:root{color-scheme:light dark;--ink:#3730a3;--ink2:#4f46e5;--tl:#0d9488;--bg:#f6f7fb;--surface:#fff;--tint:#eef0ff;--ln:#e1e4f0;--tx:#161a2e;--mut:#586084;--ok:#15803d;--ok-bg:#dcf5e5;--warn:#b45309;--warn-bg:#fdf0d5;--bad:#b91c1c;--bad-bg:#fde2e2;--focus:#f59e0b;--r:14px;--sh:0 1px 2px #1e1b4b0f,0 4px 16px #1e1b4b0a;--ease:cubic-bezier(.2,.7,.2,1)}
+@media(prefers-color-scheme:dark){:root{--ink:#a5a8ff;--ink2:#5b5fe8;--tl:#2dd4bf;--bg:#0b0d18;--surface:#141829;--tint:#1d2240;--ln:#272c47;--tx:#e9ebf8;--mut:#9aa2c4;--ok:#4ade80;--ok-bg:#12331f;--warn:#fbbf24;--warn-bg:#3a2a0c;--bad:#f87171;--bad-bg:#3b1618;--sh:0 1px 2px #0006,0 4px 16px #0004}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+::selection{background:var(--ink2);color:#fff}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Plus Jakarta Sans",system-ui,"Segoe UI",Roboto,sans-serif;padding-bottom:84px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+h1,h2{letter-spacing:-.025em;line-height:1.15}
+.skip{position:absolute;left:12px;top:-60px;background:var(--ink2);color:#fff;padding:10px 16px;border-radius:10px;z-index:99;text-decoration:none;font-weight:700}.skip:focus{top:12px}
+button,input,select,textarea{font:inherit}
+button{min-height:44px;background:var(--ink2);color:#fff;border:1.5px solid transparent;border-radius:12px;padding:10px 18px;font-weight:700;cursor:pointer;transition:transform .15s var(--ease),background .15s,box-shadow .15s,border-color .15s}
+button:hover{box-shadow:0 6px 18px #4f46e540;transform:translateY(-1px)}button:active{transform:scale(.97);box-shadow:none}
+button.o{background:var(--surface);color:var(--tx);border-color:var(--ln)}button.o:hover{border-color:var(--ink2);box-shadow:var(--sh)}
+button.x{background:var(--surface);color:var(--bad);border-color:var(--bad-bg)}
+button.sm{min-height:40px;min-width:40px;padding:6px 12px;font-size:.85em}
+button.on{background:var(--ink2);color:#fff;border-color:var(--ink2)}
+button:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+input,select,textarea{border:1.5px solid var(--ln);border-radius:12px;padding:10px 12px;width:100%;min-height:44px;background:var(--surface);color:var(--tx);transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--ink2);box-shadow:0 0 0 4px #4f46e51f;outline:0}
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--ln)}
+.top>div{max-width:1120px;margin:0 auto;padding:10px 14px;display:flex;gap:8px;align-items:center}
+.top select{flex:1;min-width:0;font-weight:700}
+.top button{background:var(--surface);color:var(--tx);border-color:var(--ln)}.top button:hover{border-color:var(--ink2)}
+.logo{flex:0 0 auto;width:34px;height:34px}
+#sv{font-size:.75em;color:var(--mut);white-space:nowrap;min-width:3.5em}
+.wrap{max-width:1120px;margin:0 auto;padding:16px 14px;animation:in .35s var(--ease)}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:20;display:flex;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--ln);padding:8px 10px calc(8px + env(safe-area-inset-bottom));gap:8px}
+.tabs button{flex:1;background:transparent;color:var(--mut);border:0;padding:11px 4px}.tabs button:hover{box-shadow:none;transform:none}
+.tabs button.on{background:var(--tint);color:var(--ink)}
+.seg{display:flex;gap:6px;margin:4px 0 12px;flex-wrap:wrap;padding:4px;background:var(--tint);border-radius:14px}.seg button{flex:1 1 90px;background:transparent;color:var(--mut);border:0}.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh)}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}.bar .f{flex:1 1 220px}
+.stat{background:var(--surface);border:1px solid var(--ln);border-radius:var(--r);padding:10px 14px;color:var(--mut);margin:10px 0}.stat b{color:var(--tx)}
+.sw{display:flex;gap:10px;align-items:center;font-weight:600;cursor:pointer;min-height:44px}.sw input{width:20px;height:20px;min-height:0;accent-color:var(--ink2)}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(310px,100%),1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--ln);border-radius:16px;padding:14px;box-shadow:var(--sh);transition:border-color .2s,box-shadow .2s,transform .2s var(--ease)}
+.card:focus-within{border-color:var(--ink2);box-shadow:0 8px 28px #4f46e526}
+.nm{display:flex;gap:10px;align-items:flex-start}
+.av{flex:0 0 38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--ink2),var(--tl));color:#fff;display:grid;place-items:center;font-weight:800;font-size:.8em}
+.nt{flex:1;min-width:0;font-weight:700;overflow-wrap:anywhere}
+.tot{flex:0 0 auto;min-width:50px;text-align:center;border-radius:12px;padding:4px 8px;font-weight:800;background:var(--tint);color:var(--mut)}
+.tot[data-l=ok]{background:var(--ok-bg);color:var(--ok)}.tot[data-l=mid]{background:var(--warn-bg);color:var(--warn)}.tot[data-l=low]{background:var(--bad-bg);color:var(--bad)}
+.tot small{display:block;font-size:.62em;font-weight:700;opacity:.85}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+label.s{font-size:.72em;color:var(--mut);font-weight:600;display:block}
+label.s input{margin-top:3px;padding:8px 2px;text-align:center;font-weight:700}
+.bd{display:inline-block;font-size:.68em;border-radius:20px;padding:1px 8px;background:var(--warn-bg);color:var(--warn);margin-left:6px;vertical-align:middle;font-weight:700}
+.h{font-weight:800;margin:22px 0 4px;color:var(--mut);font-size:.8em;text-transform:uppercase;letter-spacing:.08em;grid-column:1/-1}
+.sr{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--ln);border-radius:14px;padding:8px 10px}
+.sr .nt{flex:1 1 150px}.sr input[type=checkbox]{width:20px;height:20px;min-height:0;accent-color:var(--ink2);flex:0 0 auto}
+.sr .ac{display:flex;gap:6px;margin-left:auto}
+.mut{color:var(--mut)}
+.msg{color:var(--bad);min-height:1.4em;font-size:.9em}
+.auth{min-height:100vh;display:grid;place-items:center;padding:16px;background:radial-gradient(60% 50% at 15% 0,#4f46e540,transparent),radial-gradient(50% 50% at 90% 100%,#0d948833,transparent),var(--bg)}
+.box{background:var(--surface);border:1px solid var(--ln);border-radius:24px;padding:28px;width:100%;max-width:410px;box-shadow:0 24px 60px #1e1b4b24;animation:in .5s var(--ease)}
+.box h1{margin:12px 0 4px;color:var(--tx);font-size:1.7em}.box p{margin:10px 0}
+.lk{background:none;color:var(--ink);padding:0;min-height:44px;text-decoration:underline;font-weight:600}.lk:hover{background:none;box-shadow:none;transform:none}
+#toast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,20px);background:var(--tx);color:var(--bg);padding:11px 20px;border-radius:30px;opacity:0;pointer-events:none;transition:.3s var(--ease);z-index:50;max-width:90vw;text-align:center;box-shadow:0 10px 30px #0004}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+dialog{border:1px solid var(--ln);background:var(--surface);color:var(--tx);border-radius:22px;padding:0;width:min(660px,94vw);max-height:92vh;box-shadow:0 24px 70px #0006}
+dialog::backdrop{background:#080b2299;backdrop-filter:blur(3px)}
+.rep{padding:22px}.rep h2{margin:0;overflow-wrap:anywhere}
+.tw{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;min-width:480px}th,td{border:1px solid var(--ln);padding:8px;text-align:center}th{background:var(--tint);color:var(--ink);font-size:.8em}tbody th{text-align:left}
+.sum{display:flex;gap:10px;flex-wrap:wrap}.sum div{flex:1 1 140px;background:var(--tint);border-radius:14px;padding:10px 14px}.sum b{display:block;font-size:1.5em;color:var(--ink)}
+.spin{width:34px;height:34px;border:4px solid var(--ln);border-top-color:var(--ink2);border-radius:50%;animation:r 1s linear infinite}@keyframes r{to{transform:rotate(360deg)}}
+#pa{display:none}
+@media(min-width:700px){body{padding-bottom:0}.tabs{position:static;background:none;backdrop-filter:none;border:0;padding:16px 14px 0;max-width:1120px;margin:0 auto}.tabs button{flex:0 0 130px;background:var(--surface);border:1px solid var(--ln);color:var(--mut)}.tabs button.on{background:var(--ink2);color:#fff;border-color:var(--ink2)}#toast{bottom:30px}}
+@media(max-width:380px){.g{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+@media print{:root{color-scheme:light;--tx:#000;--surface:#fff;--tint:#f1f1f6;--ink:#222;--mut:#444;--ln:#bbb}body.pa #pa{display:block}body.pa dialog{display:none!important}#pa .rep{break-after:page}#app,#toast,.noprint{display:none!important}dialog{position:static;box-shadow:none;width:100%;max-height:none}body{background:#fff;color:#000}}
+</style></head>
+<body>
+<a class="skip" href="#app">Skip to content</a>
+<main id="app"><div class="auth"><div class="spin" role="status" aria-label="Loading"></div></div></main><noscript><p style="padding:24px">Class Scoresheet needs JavaScript. Please turn it on in your browser.</p></noscript>
+<dialog id="rp"></dialog><div id="pa"></div><div id="toast" role="status" aria-live="polite"></div>
+<script type="module">
+import {firebaseConfig,ADMIN_EMAIL} from "./firebase-config.js";
+import {SEED,REPEATERS,LBL,calc,students,groups,annual,rankOf,termStats,ord,sheetRows,grade,parseNames} from "./logic.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,deleteField,onSnapshot,query,where} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const fb=initializeApp(firebaseConfig),auth=getAuth(fb);
+const db=initializeFirestore(fb,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})}); // works offline, syncs later
+const S={user:null,ready:false,classes:[],cid:null,term:"1",tab:"scores",sel:new Set(),err:"",login:true};
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cur=()=>S.classes.find(c=>c.id===S.cid),ref=()=>doc(db,"classes",S.cid);
+const ini=n=>n.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
+const tv=x=>x?`${x.t}<small>${grade(x.t)}</small>`:"–";
+const lvl=t=>t==null?"":t>=50?"ok":t>=40?"mid":"low";
+let unsub,tt;
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2800);}
+const sv=t=>{const e=$("#sv");if(e)e.textContent=t;};
+async function save(o){sv("Saving…");try{await updateDoc(ref(),o);sv("Saved ✓");}catch(e){sv("");toast("Could not save: "+e.message);}}
+
+onAuthStateChanged(auth,u=>{
+  S.user=u;S.ready=true;unsub&&unsub();
+  if(!u){S.classes=[];S.cid=null;return render();}
+  const q=u.email===ADMIN_EMAIL?collection(db,"classes"):query(collection(db,"classes"),where("owner","==",u.uid));
+  unsub=onSnapshot(q,snap=>{
+    S.classes=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!cur())S.cid=S.classes[0]?.id||null;
+    if(document.activeElement?.matches?.("[data-f],[data-k],#nm,#sq"))return; // don't disturb typing
+    render();
+  },e=>{S.err=e.message;render();});
+});
+const AERR={"invalid-credential":"Wrong email or password.","invalid-email":"That email address doesn't look right.","email-already-in-use":"An account with this email already exists. Try logging in.","weak-password":"Password must be at least 6 characters.","missing-password":"Please type your password.","user-not-found":"No account with this email.","too-many-requests":"Too many tries. Please wait a minute and try again."};
+async function authGo(mode){
+  const e=$("#em").value.trim(),p=$("#pw")?.value,m=$("#msg");m.style.color="";m.textContent="";
+  try{
+    if(mode==="reset"){if(!e){m.textContent="Type your email first, then tap Forgot password.";return;}
+      await sendPasswordResetEmail(auth,e);m.style.color="var(--ok)";m.textContent="Reset link sent. Check your inbox and spam folder.";return;}
+    mode==="in"?await signInWithEmailAndPassword(auth,e,p):await createUserWithEmailAndPassword(auth,e,p);
+  }catch(x){m.textContent=AERR[x.code?.replace("auth/","")]||x.message;}
+}
+async function newClass(){
+  const subject=prompt("Subject (e.g. Mathematics)");if(subject===null)return;
+  const cls=prompt("Class (e.g. SS2)");if(cls===null)return;
+  const teacher=prompt("Teacher name")||"";
+  const d=await addDoc(collection(db,"classes"),{owner:S.user.uid,ownerEmail:S.user.email,subject,cls,teacher,bonus:false,students:{},scores:{}});
+  S.cid=d.id;S.tab="students";render();
+}
+async function setScore(sid,f,raw){
+  const c=cur(),max={a:10,b:10,c:10,e:70,at:5,tb:5,nb:5}[f];
+  let v=raw===""?null:Math.max(0,Math.min(max,+raw));if(v!==null&&isNaN(v))v=null;
+  const t=((c.scores||={})[S.term]||={});(t[sid]||={});
+  v===null?delete t[sid][f]:t[sid][f]=v;
+  const x=calc(c,S.term,sid),cell=$(`#t-${sid}`);
+  if(cell){cell.innerHTML=tv(x);cell.dataset.l=lvl(x?.t);}
+  statLine();
+  await save({[`scores.${S.term}.${sid}.${f}`]:v===null?deleteField():v});
+}
+function statLine(){const e=$("#stat");if(!e)return;const s=termStats(cur(),S.term);
+  e.innerHTML=`<b>${s.scored}</b> of ${s.total} students scored`+(s.avg!=null?` · class average <b>${s.avg}</b>/100`:"");}
+async function addStudent(){
+  const n=$("#nm").value.trim().replace(/\s+/g," ");if(!n)return;
+  if(students(cur()).some(s=>s.n.toLowerCase()===n.toLowerCase()))return toast("That name is already in this class.");
+  const id="s"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  await save({[`students.${id}`]:{n,s:$("#sx").value,r:$("#rp2").checked}});$("#nm").value="";$("#nm").focus();
+}
+async function loadSeed(){
+  const have=new Set(students(cur()).map(s=>s.n.toLowerCase())),o={},t=Date.now();let k=0;
+  SEED.forEach((n,i)=>{if(!have.has(n.toLowerCase())){o[`students.p${t}_${i}`]={n,s:"",r:false};k++;}});
+  REPEATERS.forEach((n,i)=>{if(!have.has(n.toLowerCase())){o[`students.r${t}_${i}`]={n,s:"",r:true};k++;}});
+  if(!k)return toast("The SS2 list is already loaded.");
+  await save(o);toast(`${k} students added. Now set Male/Female.`);
+}
+async function bulkSex(v){
+  if(!S.sel.size)return toast("Tick some students first.");
+  const o={};S.sel.forEach(id=>o[`students.${id}.s`]=v);S.sel.clear();await save(o);toast("Updated.");
+}
+function exportXlsx(){
+  const c=cur();if(!window.XLSX)return toast("Excel library is still loading. Try again.");
+  const {rows,merges}=sheetRows(c),ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!merges"]=merges;ws["!cols"]=[{wch:5},{wch:32},...Array(18).fill({wch:9}),{wch:9},{wch:11},{wch:12}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Scoresheet");
+  XLSX.writeFile(wb,`${c.cls||"class"}_${c.subject||"scores"}.xlsx`.replace(/\s+/g,"_"));toast("Excel file downloaded.");
+}
+function repHTML(id,btns){
+  const c=cur(),s=c.students[id],an=annual(c,id);
+  const rows=["1","2","3"].map(t=>{const x=an.t[t],r=rankOf(c,t,id);
+    return `<tr><th>${LBL[t]}</th>`+(x?`<td>${x.a}</td><td>${x.b}</td><td>${x.c}</td><td>${x.ex}</td><td><b>${x.t}</b></td><td>${grade(x.t)}</td><td>${ord(r.p)} of ${r.n}</td>`:`<td colspan="7" class="mut">No scores yet</td>`)+`</tr>`;}).join("");
+  return `<div class="rep"><h2>${esc(s.n)}${s.r?'<span class="bd">Repeater</span>':""}</h2>
+  <div class="mut">${esc(c.cls)} ${esc(c.subject)} · Teacher: ${esc(c.teacher)}</div>
+  <div class="tw"><table><thead><tr><th>Term</th><th>1st CA /10</th><th>2nd CA /10</th><th>Open day /10</th><th>Exam /70</th><th>Total /100</th><th>Grade</th><th>Position</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="sum"><div>Annual total<b>${an.n?an.sum:"–"}</b></div><div>Weighted average<b>${an.avg??"–"}</b></div><div>Average grade<b>${an.avg!=null?grade(an.avg):"–"}</b></div></div>
+  <p class="mut" style="font-size:.8em">Grades: A 70–100, B 60–69, C 50–59, D 45–49, E 40–44, F 0–39.${c.bonus?" Exam includes bonus marks (attendance, textbook, notebook).":""}</p>
+  ${btns?'<div class="bar noprint" style="justify-content:flex-end"><button class="o" data-a="pr">Print / Save PDF</button><button data-a="cl">Close</button></div>':""}</div>`;
+}
+const report=id=>{$("#rp").innerHTML=repHTML(id,true);$("#rp").showModal();};
+function printAll(){ // one report per page, every student
+  const c=cur();if(!students(c).length)return toast("No students yet.");
+  $("#pa").innerHTML=students(c).map(s=>repHTML(s.id,false)).join("");
+  document.body.classList.add("pa");
+  const done=()=>{document.body.classList.remove("pa");$("#pa").innerHTML="";removeEventListener("afterprint",done);};
+  addEventListener("afterprint",done);print();
+}
+
+function render(){
+  const a=$("#app");
+  if(!S.ready)return;
+  if(!S.user){
+    a.innerHTML=`<div class="auth"><div class="box"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#4f46e5"/><path d="M18 33l9 9 19-20" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg><h1>Class Scoresheet</h1><div class="mut">Record scores, see reports, export to Excel.</div>
+    <p><input id="em" type="email" placeholder="Email" autocomplete="username"></p>
+    <p><input id="pw" type="password" placeholder="Password (6+ characters)" autocomplete="current-password"></p>
+    <label class="sw mut" style="font-weight:400"><input type="checkbox" id="sp"> Show password</label>
+    <p><button data-a="in" style="width:100%">Log in</button></p><p><button class="o" data-a="up" style="width:100%">Create new account</button></p>
+    <p style="text-align:center"><button class="lk" data-a="reset">Forgot password?</button></p><div class="msg" id="msg"></div></div></div>`;return;
+  }
+  const c=cur(),admin=S.user.email===ADMIN_EMAIL;
+  let h=`<header class="top"><div><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#4f46e5"/><path d="M18 33l9 9 19-20" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg><select id="cs" aria-label="Class">${S.classes.map(k=>`<option value="${k.id}" ${k.id===S.cid?"selected":""}>${esc(k.cls)} ${esc(k.subject)}${admin&&k.owner!==S.user.uid?" – "+esc(k.ownerEmail):""}</option>`).join("")||"<option>No class yet</option>"}</select>
+  <span id="sv"></span><button data-a="nc">+ Class</button><button data-a="so">Sign out</button></div></header>`;
+  if(!c){a.innerHTML=h+`<div class="wrap"><div class="stat">${S.err?esc(S.err):"Welcome! Tap <b>+ Class</b> to create your first class."}</div></div>`;return;}
+  h+=`<div class="tabs">${[["scores","Scores"],["students","Students"],["class","Class"]].map(([k,v])=>`<button data-a="tab" data-v="${k}" class="${S.tab===k?"on":""}">${v}</button>`).join("")}</div><div class="wrap">`;
+  if(S.tab==="scores"){
+    h+=`<div class="seg">${["1","2","3"].map(t=>`<button data-a="term" data-v="${t}" class="${S.term===t?"on":"o"}">${LBL[t]}</button>`).join("")}</div>
+    <div class="bar"><input class="f" id="sq" type="search" placeholder="Find a student" aria-label="Find a student">
+    <label class="sw"><input type="checkbox" id="bn" ${c.bonus?"checked":""}> Add bonus marks to exam</label></div><div class="stat" id="stat"></div>`;
+    if(!students(c).length)h+=`<div class="stat">No students yet. Open the <b>Students</b> tab to add them.</div>`;
+    h+=`<div class="list">`;
+    groups(c).forEach(([label,list])=>{
+      h+=`<div class="h">${label} (${list.length})</div>`;
+      list.forEach(s=>{
+        const r=(c.scores?.[S.term]||{})[s.id]||{},x=calc(c,S.term,s.id);
+        const inp=(f,l,m)=>`<label class="s">${l} /${m}<input type="number" inputmode="decimal" enterkeyhint="next" min="0" max="${m}" step="any" data-s="${s.id}" data-f="${f}" value="${r[f]??""}"></label>`;
+        h+=`<div class="card" data-n="${esc(s.n.toLowerCase())}"><div class="nm"><div class="av">${esc(ini(s.n))}</div>
+        <div class="nt">${esc(s.n)}${s.r?'<span class="bd">Repeater</span>':""}<div><button class="lk" data-a="rep" data-v="${s.id}" style="font-size:.8em">Report</button></div></div>
+        <div class="tot" id="t-${s.id}" data-l="${lvl(x?.t)}">${tv(x)}</div></div>
+        <div class="g">${inp("a","1st CA",10)}${inp("b","2nd CA",10)}${inp("c","Open day",10)}${inp("e","Exam",70)}</div>
+        <div class="g3">${inp("at","Attendance",5)}${inp("tb","Textbook",5)}${inp("nb","Notebook",5)}</div></div>`;
+      });
+    });
+    h+=`</div>`;
+  }
+  if(S.tab==="students"){
+    h+=`<div class="bar"><input class="f" type="text" id="nm" placeholder="Student name" aria-label="Student name"><select id="sx" style="width:auto"><option value="">Sex?</option><option value="M">Male</option><option value="F">Female</option></select>
+    <label class="sw"><input type="checkbox" id="rp2"> Repeater</label><button data-a="ad">Add student</button></div>
+    <div class="bar"><button class="o" data-a="sd">Load SS2 list (147 + 21 repeaters)</button><button class="o" data-a="imp0">Paste names</button><button class="o" data-a="pa">Print all reports</button></div>
+    <div class="stat"><b>Set Male/Female in bulk:</b> tick students, then tap Set Male or Set Female.
+    <div class="bar" style="margin-bottom:0"><button class="o sm" data-a="bulk" data-v="unset">Tick all not set</button><button class="o sm" data-a="bulk" data-v="all">Tick all</button><button class="o sm" data-a="bulk" data-v="none">Clear</button>
+    <span id="selc" class="mut">${S.sel.size} ticked</span><button class="sm" data-a="bulk" data-v="M">Set Male</button><button class="sm" data-a="bulk" data-v="F">Set Female</button></div></div><div class="list" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px">`;
+    groups(c).forEach(([label,list])=>{
+      h+=`<div class="h">${label} (${list.length})</div>`+list.map(s=>`<div class="sr"><input type="checkbox" data-sel="${s.id}" ${S.sel.has(s.id)?"checked":""} aria-label="Select ${esc(s.n)}">
+      <div class="nt">${esc(s.n)}${s.r?'<span class="bd">Repeater</span>':""}</div>
+      <div class="ac"><button class="sm ${s.s==="M"?"on":"o"}" data-a="sx" data-v="${s.id}|M">M</button><button class="sm ${s.s==="F"?"on":"o"}" data-a="sx" data-v="${s.id}|F">F</button>
+      <button class="sm o" data-a="rep" data-v="${s.id}">Report</button><button class="sm o" data-a="ren" data-v="${s.id}" aria-label="Rename">Edit</button><button class="sm x" data-a="del" data-v="${s.id}" aria-label="Remove">×</button></div></div>`).join("");
+    });
+    h+=`</div>`;
+  }
+  if(S.tab==="class"){
+    h+=`<div class="card" style="max-width:520px"><p><label class="s">Subject<input data-k="subject" value="${esc(c.subject)}"></label></p>
+    <p><label class="s">Class<input data-k="cls" value="${esc(c.cls)}"></label></p><p><label class="s">Teacher<input data-k="teacher" value="${esc(c.teacher)}"></label></p>
+    <div class="bar"><button data-a="ex">Export to Excel</button><button class="o" data-a="pa">Print all reports</button><button class="x" data-a="dc">Delete class</button></div></div>`;
+  }
+  a.innerHTML=h+"</div>";
+  if(S.tab==="scores")statLine();
+}
+
+// one click handler and one change handler for the whole app (fast, even with 170 students)
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-a]");if(!b)return;const v=b.dataset.v,c=cur();
+  switch(b.dataset.a){
+    case"in":case"up":return authGo(b.dataset.a);case"reset":return authGo("reset");
+    case"so":return signOut(auth);case"nc":return newClass();
+    case"tab":S.tab=v;return render();case"term":S.term=v;return render();
+    case"ad":return addStudent();case"sd":return loadSeed();case"ex":return exportXlsx();
+    case"pa":return printAll();
+    case"imp0":$("#rp").innerHTML=`<div class="rep"><h2>Paste names</h2><p class="mut">One student per line. Optional: add <b>, M</b> or <b>, F</b>, and <b>, R</b> for a repeater (example: <i>Ada Obi, F, R</i>). Numbers at the start of a line, like "1.", are removed.</p><textarea id="pt" rows="10" style="width:100%;border:1.5px solid var(--ln);border-radius:10px;padding:10px" placeholder="Ada Obi, F&#10;Tunde Bello, M"></textarea><div class="bar" style="justify-content:flex-end"><button class="o" data-a="cl">Cancel</button><button data-a="imp1">Add names</button></div></div>`;$("#rp").showModal();return;
+    case"imp1":{const have=new Set(students(c).map(x=>x.n.toLowerCase())),o={},t=Date.now();let k=0,d=0;
+      parseNames($("#pt").value).forEach((x,i)=>{const key=x.n.toLowerCase();if(have.has(key)){d++;return;}have.add(key);o[`students.i${t}_${i}`]=x;k++;});
+      $("#rp").close();if(k)await save(o);return toast(`${k} added`+(d?`, ${d} skipped (already in class)`:""));}
+    case"rep":return report(v);case"cl":return $("#rp").close();case"pr":return print();
+    case"sx":{const[id,s]=v.split("|");return save({[`students.${id}.s`]:c.students[id].s===s?"":s});}
+    case"ren":{const n=prompt("Edit name",c.students[v].n)?.trim().replace(/\s+/g," ");if(n)save({[`students.${v}.n`]:n});return;}
+    case"del":if(confirm(`Remove ${c.students[v].n}? Their scores are removed too.`))save({[`students.${v}`]:deleteField(),[`scores.1.${v}`]:deleteField(),[`scores.2.${v}`]:deleteField(),[`scores.3.${v}`]:deleteField()});return;
+    case"dc":if(confirm("Delete this class and all its scores? This cannot be undone.")){await deleteDoc(ref());S.cid=null;}return;
+    case"bulk":
+      if(v==="M"||v==="F")return bulkSex(v);
+      if(v==="none")S.sel.clear();
+      else students(c).forEach(s=>{if(v==="all"||!s.s)S.sel.add(s.id);});
+      return render();
+  }
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset.f)return setScore(t.dataset.s,t.dataset.f,t.value);
+  if(t.dataset.k)return save({[t.dataset.k]:t.value});
+  if(t.dataset.sel){t.checked?S.sel.add(t.dataset.sel):S.sel.delete(t.dataset.sel);const s=$("#selc");if(s)s.textContent=S.sel.size+" ticked";return;}
+  if(t.id==="bn")return save({bonus:t.checked});
+  if(t.id==="cs"){S.cid=t.value;S.sel.clear();render();}
+  if(t.id==="sp")$("#pw").type=t.checked?"text":"password";
+});
+document.addEventListener("input",e=>{
+  if(e.target.id!=="sq")return;const q=e.target.value.trim().toLowerCase();
+  document.querySelectorAll(".card[data-n]").forEach(k=>k.hidden=!k.dataset.n.includes(q));
+});
+document.addEventListener("keydown",e=>{
+  const t=e.target;
+  if(e.key==="Enter"&&t.id==="nm")return addStudent();
+  if(e.key==="Enter"&&t.id==="pw")return authGo("in");
+  if(e.key==="Enter"&&t.dataset?.f){e.preventDefault();t.blur(); // move to the same box on the next student
+    const all=[...document.querySelectorAll(`[data-f="${t.dataset.f}"]`)].filter(i=>!i.closest("[hidden]")),n=all[all.indexOf(t)+1];n&&n.focus();}
+});
+window.addEventListener("offline",()=>toast("You are offline. Changes will sync when you reconnect."));
+window.addEventListener("online",()=>toast("Back online."));
+</script>
+</body></html>

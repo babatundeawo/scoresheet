@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /classes/{id} {
+      // Any signed-in user can create a class that belongs to them.
+      allow create: if request.auth != null
+                    && request.resource.data.owner == request.auth.uid;
+      // Owners (and the admin email) can read and delete.
+      allow read, delete: if request.auth != null
+        && (resource.data.owner == request.auth.uid
+            || request.auth.token.email == 'tunspiderman@gmail.com');
+      // Updates must never change who owns a class.
+      allow update: if request.auth != null
+        && (resource.data.owner == request.auth.uid
+            || request.auth.token.email == 'tunspiderman@gmail.com')
+        && request.resource.data.owner == resource.data.owner;
+    }
+    // Everything else is denied by default.
+  }
+}
